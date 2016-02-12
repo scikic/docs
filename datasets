@@ -1,0 +1,82 @@
+Below is a list of the datasets, with what info they use and what questions they ask.
+
+answer_babynames: Doesn't ask for name directly, instead gets it from 'facts' dictionary.
+
+answer_direct: Originally designed to ask the user questions directly at the end of the inference to see if the scikic guessed correctly. For example:
+{'dataset':'direct', 'dataitem':'age','detail':'','answer':'33'}
+{'dataset':'direct', 'dataitem':'religion','detail':'','answer':'none'}
+
+answer_facebook: Doesn't ask a question, but instead has the answer set by 
+{'dataset':'facebook', 'dataitem':'data','detail':'','answer':json_wrapped_response_from_fb}
+
+E.g. from my old front-end:
+
+    data = {}
+    for key in form:
+        data[key] = form[key].value
+
+    #get their facebook id
+    fbdata = json.loads(data['reply'])
+    fbid = fbdata['id']
+    whf.set_facebook_id(con,userid,sid,fbid)
+    
+then we use:
+    {'dataset':'facebook', 'dataitem':'data','detail':'','answer':json.dumps(data)}
+
+answer_geoloc: Looks in the facts dictionary and works out location from IP address. It has three questions it might ask:
+    	if (self.dataitem=='nearcity'):
+            return {'question':"Is your current home in or near %s, %s?" % (self.detail['city'], self.detail['country']),'type':'select','options':['yes','no','don\'t know']} 
+        if (self.dataitem=='city'):
+            return {'question':"Which city or town are you in or near now?", 'type':'text'}
+        if (self.dataitem=='country'):
+            return {'question':"Which country are you in now?",'type':'select','options':['United States','United Kingdom','Germany','Canada','France','Other']} 
+So the things we can pass include:
+    {'dataset':'geoloc', 'dataitem':'nearcity','detail':{'country':'uk','city':'sheffield'},'answer':'yes'} (the detail field holds info about the query, to make it easier for a newly instantiated answer_geoloc to use the response).
+    {'dataset':'geoloc', 'dataitem':'city','detail':'','answer':'london'} (this fills in country from other info it knows)
+    {'dataset':'geoloc', 'dataitem':'country','detail':'','answer':'uk'}  (this calls parseCountry which helps convert all the different ways people refer to the US and UK into 'gb' or 'us').
+    
+
+    
+answer_lifestyle: This is really simple, and doesn't do anything yet. But it's where we can ask lots of unrelated questions.
+Questions:
+        if (self.dataitem=='workplace'):
+            return {'question':"Where do you work?",'type':'text'};
+    	if (self.dataitem=='cats'):
+            return {'question':"How many cats do you have?",'type':'text'};
+    	if (self.dataitem=='guns'):
+            return {'question':"How many guns do you own?",'type':'text'};
+    	if (self.dataitem=='travel'):
+            return {'question':"How do you travel to work?",'type':'select','options':['Not in employment','Work mainly from home','Train/Tram/underground','Bus','Car/van','Bicycle','On Foot','Other']};
+              
+E.g.
+    {'dataset':'lifestyle', 'dataitem':'workplace','detail':'','answer':'london'}
+    {'dataset':'lifestyle', 'dataitem':'cats','detail':'','answer':'4'}    
+    {'dataset':'lifestyle', 'dataitem':'guns','detail':'','answer':'50'}
+    {'dataset':'lifestyle', 'dataitem':'travel','detail':'','answer':'Bicycle'}
+    
+answer_like_locations: If we've got the users likes (fed in through the answer_facebook object) they will be in facts['facebook_likes']. This is processed by this class accessing the facebook graph.facebook.com. It adds a ['where_history'] item to the facts dictionary (uses the locations of historic likes to predict possible countries the person lived in. Will add cities too at some point).
+
+answer_movielens: Answers can be whether a movie's been seen or rated.
+    {'dataset':'movielens', 'dataitem':'seen','detail':'123','answer':'yes'} -- 123 is the id of the movie. Get the name using the get_movie_name method in this class.
+    {'dataset':'movielens', 'dataitem':'rate','detail':'123','answer':'4'}
+    
+answer_music: (Written by Felix, July 2015). Gives music recommendations etc (using 3rd party APIs)
+    {'dataset':'music','dataitem':'favourite_artist','detail':'','answer':'Eels'} 
+    It queries the ws.audioscrobbler.com API and api.bandsintown.com API. I've not checked their TOS to see if we can do this. Might have to disable this module.
+
+answer_osm: Uses the location info in the facts dictionary to generate insights (currently just does the number of museums, but ready to add more).
+
+answer_postal: Uses postcode or zipcode to get our location.
+    {'dataset':'postal', 'dataitem':'postcode','detail':'','answer':'S63AB'}
+    {'dataset':'postal', 'dataitem':'zipcode','detail':'','answer':'12345'}
+    
+answer_uk_census: Generates insights and features for MCMC, from facts dictionary. No questions/answers.
+
+answer_us_census: Generates insights and features for MCMC, from facts dictionary. No questions/answers.
+
+answer_user_agent_info: Parses user agent origin info (mainly to get their IP address).
+    {'dataset':'user_agent_info', 'dataitem':'','detail':'','answer':json_wrapped_user_agent_info... containing eg ['REMOTE_ADDR']}
+    
+
+
+
